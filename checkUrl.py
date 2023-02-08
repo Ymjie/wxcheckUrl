@@ -32,6 +32,9 @@ class checkThread(threading.Thread):
     def check(url):
         resp=requests.get(f'https://mp.weixinbridge.com/mp/wapredirect?url={quote(url)}',allow_redirects=False)
         if resp.status_code!=302:
+            print("情况不对劲，可能接口被风控，暂停！")
+            print(f"当前URL：{url}, 可过段时间继续从此位置继续扫描")
+            exit()
             return True
         if "weixin110.qq.com" not in resp.headers["Location"]:
             return True
@@ -43,6 +46,7 @@ class checkThread(threading.Thread):
 
 def main():
     url_queue = Queue.Queue()
+    s=set()
     with open(sys.argv[1],"r") as f:
         for l in f:
             l=l.strip()
@@ -50,10 +54,12 @@ def main():
                 continue
             up=urlparse(l)
             l=up.scheme+'://'+up.netloc
-            print(l)
-            url_queue.put(l)
+            s.add(l)
+        for i in s:
+            url_queue.put(i)
+    print(f"已提取{len(s)}个域名,开始检测")
     threads = []
-    for i in range(5):
+    for i in range(1):# 已测试  2线程都会被风控。
         chT= checkThread(url_queue)
         threads.append(chT)
         chT.start()
